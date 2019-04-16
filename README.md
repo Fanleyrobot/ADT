@@ -1,2 +1,2 @@
 # ADT
-The codes for adversarial discriminative sim-to-real transfer of visuo-motor policies.
+The datasets and code for adversarial discriminative sim-to-real transfer of visuo-motor policies will be available when the paper is ready to publish. Coming soon...
