@@ -1,0 +1,117 @@
+#!/bin/bash
+
+# File
+# @description:
+#     This file is for testing a combined network (p+c) for 7 DoF table-top object reaching in either the real world or simulation.
+#     TODO: Merge the scripts with the ones for training.
+#     TODO: Fix the feature_dim inconsistency in setting.
+# @version: V0.10
+# @author: Fangyi Zhang   email:gzzhangfangyi@gmail.com
+# @acknowledgement:
+#     ARC Centre of Excellence for Robotic Vision (ACRV)
+#     Queensland Univsersity of Technology (QUT)
+# @history:
+#     V0.00   05/06/2015  developed the first version
+#     V0.10   03/08/2018  merged test_sim and test_real into one script
+
+if [ -z "$1" ]
+  then echo "Please provide the filename of the ploted curve and history data, e.g.  ./manipulation_cpu threelink "; exit 0
+fi
+
+PLOTNAME=$1
+
+display=1 # Set to 1 to watch agent train (works only if display is available)
+# Check GUI availability
+xhost +si:localuser:$( whoami ) >&/dev/null && {
+	# GUI available
+	display_avail=1
+} || {
+	# GUI not available
+	display_avail=0
+}
+
+#======= Simulator Settings & Input Dimension ===================
+sim_file="simulator/vrep_baxter_picking_inhand_cam_real"
+# sim_file="simulator/vrep_baxter_picking_inhand_cam_sim"
+ncols=1 # the number of color chanels of the inputs to networks, it is 1 here since images will be rescaled and transfered to grey image before being input to networks.
+feature_dim={10,1} # the dimention of one frame of output features from the simulator after scaling
+state_dim=10 # the one-dimensional size of one input frame
+
+#======= Network Settings ==================
+# agent="SupervisedLearner"
+agent="ADTLearner"
+netfile="\"net/fcnet_ctrl_SL_vel\""
+preproc_net="\"net/net_downsample_256_with_normalization\""
+agent_type="FC"
+agent_name=$agent_type"_"$PLOTNAME
+feature_mode="low" # whether use low dimensional features as inputs
+hist_len=1 # the number of frames input to the network
+fixed_layers={} # set the index of the weight-fixed layers
+# n_actions=7
+
+#======= Training Settings ==================
+n_replay=1 #learning how many times when updating Q value function
+update_freq=4 #update Q value function after how many steps
+discount=0.99
+wc=0 #the lamda of L2 regularization term
+target_q=1000 #the period length in step for target_q updating
+seed=1
+lr_startt=50000 # the learning will start at this step, before which the game actiona will be randomly selected, Q value will not be updated
+#initial_priority="false"
+replay_memory=1000000
+nonTermProb=1 #the probability of sampling non-terminal samples into training minibatches
+eps_start=0 # the exploration probability at the beginning
+eps_end=0 # the exploration probability at the end of the exploration probability decreasing process, i.e., eps_endt
+eps_endt=1000000 # the end step of the exploration probability decreasing process
+lr=0.01 # learning rate at the beginning
+lr_end=0.01 # leaqrning rate at the end
+lr_endt=6000000 # the step of the learning rate end point
+minibatch_size=96 # the minibatch size
+steps=50000000
+
+agent_params="fixed_layers="$fixed_layers",lr="$lr",lr_end="$lr_end",lr_endt="$lr_endt",ep="$eps_start",ep_end="$eps_end",ep_endt="$eps_endt",discount="$discount",hist_len="$hist_len",lr_startt="$lr_startt",replay_memory="$replay_memory",update_freq="$update_freq",n_replay="$n_replay",network="$netfile",preproc="$preproc_net",feature_dim="$feature_dim",state_dim="$state_dim",minibatch_size="$minibatch_size",rescale_r=1,ncols="$ncols",bufferSize=512,valid_size=500,target_q="$target_q",wc="$wc",clip_delta=1,min_reward=-1,max_reward=1,nonTermProb="$nonTermProb""
+
+#======= Evaluation Settings ====================
+eval_freq=100000
+prog_freq=10000
+save_freq=25000
+# Added by Fangyi Zhang to set different plot filename
+plot_filename=$PLOTNAME
+# End Add
+
+#======= Hardware Settings ======================
+gpu=-1 # if use CPU, set it to -1, otherwise, the program will use gpu
+num_threads=4 # the number of threads,
+# the torch will autonomously take use of multiple cpus to speed up the performance.
+# normally, one cpu takes charge of two threads
+
+network="EE4.t7"
+
+# args="-framework $FRAMEWORK -game_path $game_path -name $agent_name -env $ENV -env_params $env_params -network $network -agent $agent -agent_params $agent_params -saveNetworkParams $save_network_params -steps $steps -eval_freq $eval_freq -eval_steps $eval_steps -prog_freq $prog_freq -save_freq $save_freq -actrep $actrep -gpu $gpu -random_starts $random_starts -pool_frms $pool_frms -seed $seed -threads $num_threads -display $display -display_avail $display_avail -plot_filename $plot_filename"
+args="-name $agent_name -agent $agent -agent_params $agent_params -steps $steps -eval_freq $eval_freq -prog_freq $prog_freq -save_freq $save_freq -gpu $gpu -seed $seed -threads $num_threads -display $display -display_avail $display_avail -plot_filename $plot_filename -sim_file $sim_file -feature_mode $feature_mode"
+if [ -n "$network" ]; then
+  args="$args -network $network"
+fi
+
+echo $args
+
+cd deep_manipulation
+torch_path=$TORCH_PATH
+qlua="$torch_path/bin/qlua" # qlua normal place
+luajit="$torch_path/bin/luajit" #luajit normal place
+script="main_scripts/test_picking_vel_real_e2e.lua"
+if [[ "$display_avail" == 1 ]]; then
+	# GUI is available
+	if [ -e "$qlua" ]
+	then $qlua $script $args
+	else
+	echo "cannot find $qlua"
+	fi
+else
+	# GUI is not available
+	if [ -e "$luajit" ]
+	then $luajit $script $args
+	else
+	echo "cannot find $luajit"
+	fi
+fi

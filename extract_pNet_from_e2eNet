@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# File
+# @description:
+#     This file is for extracting a perception network from an end-to-end network.
+# @version: V0.10
+# @author: Fangyi Zhang   email:gzzhangfangyi@gmail.com
+# @acknowledgement:
+#     ARC Centre of Excellence for Robotic Vision (ACRV)
+#     Queensland Univsersity of Technology (QUT)
+# @history:
+#     V0.00   23/08/2017  developed the first version
+#     V0.10   26/09/2018  re-organized
+
+
+#======= Settings ===================
+network="CNN_E2E_P0_FT14_003_0.875_0.9_8_no_extra_sim_70000.t7"
+index="p_model"
+args="-network $network -index $index"
+echo $args
+
+cd deep_manipulation
+torch_path=$TORCH_PATH
+qlua="$torch_path/bin/qlua" # qlua normal place
+luajit="$torch_path/bin/luajit" #luajit normal place
+script="tool/extract_perception_net_from_e2e_net.lua"
+if [[ "$display_avail" == 1 ]]; then
+	# GUI is available
+	if [ -e "$qlua" ]
+	then $qlua $script $args
+	else
+	echo "cannot find $qlua"
+	fi
+else
+	# GUI is not available
+	if [ -e "$luajit" ]
+	then $luajit $script $args
+	else
+	echo "cannot find $luajit"
+	fi
+fi

@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# File
+# @description:
+#     This file is for the pre-trained network transformation from GPU to CPU.
+# @version: V0.10
+# @author: Fangyi Zhang   email:gzzhangfangyi@gmail.com
+# @acknowledgement:
+#     ARC Centre of Excellence for Robotic Vision (ACRV)
+#     Queensland Univsersity of Technology (QUT)
+# @history:
+#     V0.00   06/08/2015  developed the first version
+#     V0.10   26/07/2018  updated for re-organization
+
+if [ -z "$1" ] || [ -z "$2" ]
+  then echo "Please provide the GPU network file and the model index, e.g. ./gpu_nnTocpu_nn file_name.t7 perception model"; exit 0
+fi
+
+NETWORK=$1
+INDEX=$2
+
+agent_name=$NETWORK".transferred"
+network=$NETWORK
+model_index=$INDEX
+
+args="-name $agent_name -network $network -model_index $model_index"
+echo $args
+
+cd deep_manipulation
+torch_path=$TORCH_PATH
+qlua="$torch_path/bin/qlua" # qlua normal place
+luajit="$torch_path/bin/luajit" #luajit normal place
+script="tool/gpu_nnTocpu_nn.lua"
+if [[ "$display_avail" == 1 ]]; then
+	# GUI is available
+	if [ -e "$qlua" ]
+	then $qlua $script $args
+	else
+	echo "cannot find $qlua"
+	fi
+else
+	# GUI is not available
+	if [ -e "$luajit" ]
+	then $luajit $script $args
+	else
+	echo "cannot find $luajit"
+	fi
+fi

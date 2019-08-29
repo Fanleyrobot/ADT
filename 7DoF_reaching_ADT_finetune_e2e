@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# File
+# @description:
+#     This file is for fine-tuning a combined network in an end-to-end manner.
+# @version: V0.10
+# @author: Fangyi Zhang   email:gzzhangfangyi@gmail.com
+# @acknowledgement:
+#     ARC Centre of Excellence for Robotic Vision (ACRV)
+#     Queensland Univsersity of Technology (QUT)
+# @history:
+#     V0.00   15/04/2018  developed the first version
+#     V0.10   22/05/2019  cleaned up this bash file
+
+if [ -z "$1" ]
+  then echo "Please provide the filename of the ploted curve and history data, e.g.  ./manipulation_cpu threelink "; exit 0
+fi
+
+PLOTNAME=$1
+
+display=1 # Set to 1 to watch agent train (works only if display is available)
+# Check GUI availability
+xhost +si:localuser:$( whoami ) >&/dev/null && {
+	# GUI available
+	display_avail=1
+} || {
+	# GUI not available
+	display_avail=0
+}
+
+#======= Simulator Settings & Input Dimension ===================
+sim_file="simulator/vrep_baxter_picking_inhand_cam_dataset_adt_finetune_e2e"
+ncols=3 # the number of color chanels of the inputs to networks, it is 1 here since images will be rescaled and transfered to grey image before being input to networks.
+feature_dim={256,256} # the dimention of one frame of output features from the simulator after scaling
+state_dim=65536 # the one-dimensional size of one input frame
+
+#======= Network Settings ==================
+agent="ADTLearner"
+netfile="\"net/convnet_percept_GNet\""
+# preproc_net="\"net/net_downsample_256_complex\""
+# p_preproc_net="\"net/net_downsample_256_full_y\""
+
+# preproc_net="\"net/net_downsample_256_complex_with_normalization\""
+preproc_net="\"net/net_downsample_256_with_normalization\""
+# auto_preproc_net="\"net/net_downsample_48_with_normalization\""
+# auto_preproc_net="\"net/net_downsample_48\""
+
+# preproc_net="\"net/net_downsample_129_full_y\""
+agent_type="CNN"
+agent_name=$agent_type"_"$PLOTNAME
+hist_len=1 # the number of frames input to the network
+fixed_layers={} # set the index of the weight-fixed layers
+
+#======= Training Settings ==================
+n_replay=1 #learning how many times when updating Q value function
+wc=0 #the lamda of L2 regularization term
+seed=1
+lr_startt=5000 # the learning will start at this step, before which the game actiona will be randomly selected, Q value will not be updated
+# lr=0.01 # learning rate at the beginning
+# lr_end=0.001 # leaqrning rate at the end
+lr=0.001 # learning rate at the beginning
+lr_end=0.001 # leaqrning rate at the end
+lr_endt=20000 # the step of the learning rate end point
+d_lr_discount=1
+clip_delta=1
+minibatch_size=4 # the minibatch size
+steps=50000000
+n_vali_set=8 # the size of the validation set
+encoder_start=0
+d_episode_steps=1
+e_episode_steps=1
+use_PID=true
+d_loss_thr=0.5
+n_d_loss_thr=1
+shortcut_mode=false
+semi_supervised=true
+p_weight=0.90
+
+agent_params="p_weight="$p_weight",semi_supervised="$semi_supervised",shortcut_mode="$shortcut_mode",fixed_layers="$fixed_layers",lr="$lr",lr_end="$lr_end",lr_endt="$lr_endt",d_lr_discount="$d_lr_discount",hist_len="$hist_len",lr_startt="$lr_startt",n_replay="$n_replay",network="$netfile",preproc="$preproc_net",feature_dim="$feature_dim",state_dim="$state_dim",minibatch_size="$minibatch_size",ncols="$ncols",wc="$wc",clip_delta="$clip_delta",n_vali_set="$n_vali_set",encoder_start="$encoder_start",d_episode_steps="$d_episode_steps",e_episode_steps="$e_episode_steps",use_PID="$use_PID",d_loss_thr="$d_loss_thr",n_d_loss_thr="$n_d_loss_thr""
+
+#======= Evaluation Settings ====================
+eval_freq=1
+prog_freq=1
+save_freq=1000
+# Added by Fangyi Zhang to set different plot filename
+plot_filename=$PLOTNAME
+# End Add
+
+#======= Hardware Settings ======================
+gpu=-1 # if use CPU, set it to -1, otherwise, the program will use gpu
+num_threads=4 # the number of threads,
+# the torch will autonomously take use of multiple cpus to speed up the performance.
+# normally, one cpu takes charge of two threads
+
+network="EE3.t7"
+
+# real_dataset=""
+# real_ratio=0.75
+
+args="-network $network -name $agent_name -agent $agent -agent_params $agent_params -steps $steps -eval_freq $eval_freq -prog_freq $prog_freq -save_freq $save_freq -gpu $gpu -seed $seed -threads $num_threads -display $display -display_avail $display_avail -plot_filename $plot_filename -sim_file $sim_file"
+# args="-network $network -name $agent_name -agent $agent -agent_params $agent_params -steps $steps -eval_freq $eval_freq -eval_steps $eval_steps -prog_freq $prog_freq -save_freq $save_freq -gpu $gpu -seed $seed -threads $num_threads -display $display -display_avail $display_avail -plot_filename $plot_filename -sim_file $sim_file -feature_mode $feature_mode"
+echo $args
+
+cd deep_manipulation
+torch_path=$TORCH_PATH
+qlua="$torch_path/bin/qlua" # qlua normal place
+luajit="$torch_path/bin/luajit" #luajit normal place
+# script="train_perception.lua"
+# script="adapt_p_dc_semi.lua"
+script="main_scripts/semi_finetune_e2e.lua"
+# script="train_e2e.lua"
+if [[ "$display_avail" == 1 ]]; then
+	# GUI is available
+	if [ -e "$qlua" ]
+	then $qlua $script $args
+	else
+	echo "cannot find $qlua"
+	fi
+else
+	# GUI is not available
+	if [ -e "$luajit" ]
+	then $luajit $script $args
+	else
+	echo "cannot find $luajit"
+	fi
+fi
