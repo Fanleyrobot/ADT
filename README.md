@@ -1,6 +1,6 @@
 # README
 
-This project contains the source code of ADT 1.0, a Lua-based adversarial discriminative sim-to-real transfer architecture, necessary to reproduce the experiments described in the paper:
+This project contains the source code of ADT, a Lua-based adversarial discriminative sim-to-real transfer architecture, necessary to reproduce the experiments described in the paper:
 
 > Fangyi Zhang, Jürgen Leitner, Zongyuan Ge, Michael Milford, Peter Corke, "AdversarialDiscriminative Sim-to-real Transfer of Visuo-motor Policies," International Journal of RoboticsResearch (IJRR), 2019. (https://doi.org/10.1177%2F0278364919870227)
 
