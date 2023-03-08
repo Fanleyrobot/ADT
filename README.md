@@ -48,7 +48,7 @@ libpng-dev, ncurses-dev, imagemagick, unzip
 ### Training and testing
 
 Prior to training or testing, you need to:
-- download required [datasets](https://drive.google.com/drive/folders/1peyIP4kLna8OhZqCubCR-hDzAJZKi0DP?usp=sharing) and [models](https://drive.google.com/file/d/1fbj6JbtqGIyRymdy19NtWQn0O8dQwTk8/view?usp=sharing) and place them in the 'deep_manipulation' folder;
+- download required [datasets](https://drive.google.com/drive/folders/1oIbNbOhP80Cwmw58_ZkNDtuvFfBVdj0T?usp=sharing) and [models](https://drive.google.com/file/d/180lV4mm8O0DSWRFPY5YMToHcmYl-lFDo/view?usp=sharing) and place them in the 'deep_manipulation' folder;
 - change the settings in relevant scripts (e.g., 7DoF_reaching_ADT_adapt_p in the root) and simulator enties (e.g., vrep_baxter_picking_inhand_cam_dataset_adt_adapt_p.lua in the folder "simulator").
 
 Now, it should then be sufficient to run various scripts, e.g.,
